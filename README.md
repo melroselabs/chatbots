@@ -3,7 +3,7 @@ Chatbot samples for use with Amazon Lex and Melrose Labs Conversational Chatbot 
 
 https://melroselabs.com/services/conversational-chatbots/
 
-## RCS tutorial
+## RCS tutorial (rcs-package-delivery.js)
 
 1. Run ngrok on local machine for chatbot application webhook
 
