@@ -13,10 +13,10 @@ https://melroselabs.com/services/conversational-chatbots/
 
 3. Enter chatbot name (e.g. "My chatbot") and "forwarding" URL shown in ngrok, then click "Registed webhook and generate credentials"
 
-4. Modify rcs-package-delivery.js on local machine with botId, clientId and clientSecret from above generated credentials
+4. Modify rcs-package-delivery.js (lines 10,11,12) on local machine with botId, clientId and clientSecret from above generated credentials
 
 5. Run the chatbot application on local machine
 
 `node rcs-package-delivery.js`
 
-6. Click "Start Chat" in RCS Client Simulator
+6. Click "Start Chat" in RCS Client Simulator and "welcome" message from chatbot will be received
