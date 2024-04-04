@@ -1,9 +1,6 @@
 # chatbots
 Chatbot samples and tutorials for use with Amazon Lex, OpenAI Assistants and RCS.
 
-Melrose Labs Conversational Chatbot services
-https://melroselabs.com/services/conversational-chatbots/
-
 ## RCS tutorial (rcs-package-delivery.js)
 
 Simple chatbot for checking status of package and booking a package collection.  Chatbot applicaiton runs on local machine and uses RCS MaaP API with Melrose Labs RCS MaaP Simulator and RCS Client Simulator to simulate RCS Chatbot Platform and mobile phone.
