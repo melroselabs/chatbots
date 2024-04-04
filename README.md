@@ -7,7 +7,7 @@ https://melroselabs.com/services/conversational-chatbots/
 
 1. Run ngrok on local machine for chatbot application webhook
 
-ngrok http 3200
+`ngrok http 3200`
 
 2. Go to https://melroselabs.com/services/rcs-messaging/rcs-maap-simulator/
 
@@ -15,8 +15,8 @@ ngrok http 3200
 
 4. Modify rcs-package-delivery.js on local machine with botId, clientId and clientSecret from above generated credentials
 
-5. Run the chatbot application
+5. Run the chatbot application on local machine
 
-node rcs-package-delivery.js
+`node rcs-package-delivery.js`
 
 6. Click "Start Chat" in RCS Client Simulator
