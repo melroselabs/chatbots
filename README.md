@@ -1,9 +1,11 @@
 # chatbots
 Chatbot samples and tutorials for use with Amazon Lex, OpenAI Assistants and RCS.
 
-## RCS tutorial (rcs-package-delivery.js)
+## RCS tutorial (rcs-package-delivery.js / rcs-send-richcard.js)
 
-Simple chatbot for checking status of package and booking a package collection.  Chatbot applicaiton runs on local machine and uses RCS MaaP API with Melrose Labs RCS MaaP Simulator and RCS Client Simulator to simulate RCS Chatbot Platform and mobile phone.
+Simple chatbots for checking status of package and booking a package collection, and for sending a rich card to a mobile.  
+
+Chatbot applicaiton runs on local machine and uses RCS MaaP API with Melrose Labs RCS MaaP Simulator and RCS Client Simulator to simulate RCS Chatbot Platform and mobile phone.
 
 1. Run ngrok on local machine for chatbot application webhook
 
@@ -19,4 +21,8 @@ Simple chatbot for checking status of package and booking a package collection. 
 
 `node rcs-package-delivery.js`
 
-6. Click "Start Chat" in RCS Client Simulator and "welcome" message from chatbot will be received
+or
+
+`node rcs-send-richcard.js`
+
+6. "rcs-package-delivery.js" only: Click "Start Chat" in RCS Client Simulator and "welcome" message from chatbot will be received
