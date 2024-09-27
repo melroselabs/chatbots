@@ -5,10 +5,10 @@ Chatbot samples and tutorials for use with Amazon Lex, OpenAI Assistants and RCS
 
 Code objectives:
 
- • The enterprise customer can continue sending and receiving SMS messages without any changes to their existing setup.
- • The SMS aggregator reroutes the enterprise customer's “SMS” through the bridge, replacing the current SMS route.
- • The mobile user receives messages as RCS and can use RCS features to respond.
- • This setup demonstrates how easily an existing SMS channel can be "upgraded" to RCS chat or RBM.
+- The enterprise customer can continue sending and receiving SMS messages without any changes to their existing setup.
+- The SMS aggregator reroutes the enterprise customer's “SMS” through the bridge, replacing the current SMS route.
+- The mobile user receives messages as RCS and can use RCS features to respond.
+- This setup demonstrates how easily an existing SMS channel can be "upgraded" to RCS chat or RBM.
 
 The code uses the Melrose Labs RCS MaaP Simulator (https://melroselabs.com/services/rcs-messaging/rcs-maap-simulator/) to simulate an RCS Chatbot Platform and mobile user (RCS Client Simulator).
 
