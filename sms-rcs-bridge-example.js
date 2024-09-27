@@ -1,41 +1,69 @@
+/**
+ * Melrose Labs - SMS-RCS Bridge (Simple Example)
+ * ==============================================
+ * 
+ * This Node.js application serves as a bridge between SMS (using SMPP protocol) 
+ * and RCS (Rich Communication Services) using a MaaP interface to an RCS chatbot platform.
+ * 
+ * Key Functionality:
+ * ------------------
+ * 1. Listens for incoming SMPP (Short Message Peer-to-Peer) messages and forwards them 
+ *    as RCS messages to a chatbot using the MaaP API.
+ * 2. Receives webhook responses from the RCS MaaP platform and forwards them as SMPP 
+ *    `deliver_sm` messages to connected SMPP clients.
+ * 3. Handles OAuth 2.0 authentication to obtain an access token for interacting with 
+ *    the MaaP chatbot API.
+ * 4. Provides an HTTP server to handle webhook callbacks from the RCS chatbot platform.
+ * 
+ * Structure:
+ * ----------
+ * - performOAuth(): Authenticates using OAuth 2.0 to retrieve an access token.
+ * - sendRCSMessage(): Sends an RCS message to the RCS chatbot platform.
+ * - handleSMPPMessage(): Handles incoming SMPP `submit_sm` messages and forwards them as RCS messages.
+ * - sendDeliverSM(): Sends an SMPP `deliver_sm` message to connected SMPP clients.
+ * - startSMPPServer(): Starts the SMPP server to listen for incoming messages.
+ * - handleWebhookPayload(): Processes webhook payloads received via MaaP.
+ * 
+ * Requirements:
+ * --------------
+ * - Node.js v12+ 
+ * - Install the required npm packages: 
+ *      npm install http smpp rcs-maap-bot axios axios-oauth-client
+ * - You must replace the client ID, client secret, and bot ID with your credentials 
+ *   from the RCS chatbot platform and update the URLs.
+ * 
+ * License:
+ * --------
+ * You are free to use, modify, and distribute this code for any purpose, including 
+ * commercial use. No attribution is required, but it is appreciated.
+ * 
+ * Author: Melrose Labs Ltd
+ */
+
+// Import required modules
+const axios = require('axios');
 const http = require('http');
-const smpp = require('smpp');
 const Maap = require('rcs-maap-bot');
-const axiosm = require('axios');
 const oauth = require('axios-oauth-client');
+const smpp = require('smpp');
 
-const port = 5050;
-const smppPort = 2775;
+// Configuration
+const PORT = 5050;
+const SMPP_PORT = 2775;
+const OAUTH_URL = 'https://rcsmaapsim.melroselabs.com/oauth2/v1/token'; // Replace with OAuth2 URL
+const MAAP_URL = 'https://rcsmaapsim.melroselabs.com/rcs/bot/v1'; // Replace with MaaP Chatbot URL
 
-const oauth_url = 'https://rcsmaapsim.melroselabs.com/oauth2/v1/token'; // Replace with your OAuth2 URL
-const maap_url = 'https://rcsmaapsim.melroselabs.com/rcs/bot/v1'; // Replace with your MaaP Chatbot Platform URL
+const BOT_ID = 'bot904567';  // Replace with actual Bot ID
+const CLIENT_ID = '1172968146179160996';  // Replace with Client ID
+const CLIENT_SECRET = '7288480323129135260';  // Replace with Client Secret
+const CHATBOT_PHONE_NUMBER = '447900550999';
 
-// ** Get credentials (CLIENT_ID and CLIENT_SECRET) and chatbot ID (BOT_ID)
-// ** from https://melroselabs.com/services/rcs-messaging/rcs-maap-simulator/
-
-const bot_id = 'bot904567';  // Replace with your actual Bot ID
-const client_id = '4006446546022727238';  // Replace with your Client ID
-const client_secret = '8648080350986988186';  // Replace with your Client Secret
-const chatbotPhoneNumber = '447900550999';
-
+// Active SMPP sessions
 let smppSessions = [];
 
 /**
- * #########################################################
- * #                                                       #
- * #  Melrose Labs - SMS-RCS Bridge (Simple Example)        #
- * #  This application bridges SMS messages to RCS.        #
- * #                                                       #
- * #########################################################
- *
- * License:
- * You are free to use, modify, and distribute this code for any purpose,
- * including commercial use. No attribution is required, but it is appreciated. MH
- *
- */
-
-/**
  * Logs information with a timestamp.
+ * @param {string} message - The message to log.
  */
 function log(message) {
     const timestamp = new Date().toISOString();
@@ -43,30 +71,32 @@ function log(message) {
 }
 
 /**
- * Displays the title for the application.
+ * Displays the application title.
  */
 function displayTitle() {
-    console.log("Melrose Labs SMS-RCS Bridge (simple example)");
+    console.log('Melrose Labs SMS-RCS Bridge (simple example)');
+    console.log('melroselabs.com');
 }
 
 /**
  * Retrieves OAuth token for the RCS bot.
  */
 async function performOAuth() {
-    const getClientCredentials = oauth.clientCredentials(axiosm.create(), oauth_url, client_id, client_secret);
-
+    const getClientCredentials = oauth.clientCredentials(axios.create(), OAUTH_URL, CLIENT_ID, CLIENT_SECRET);
     try {
-        const auth = await getClientCredentials("botmessage");
-        log("Successfully obtained OAuth token.");
+        const auth = await getClientCredentials('botmessage');
+        log('Successfully obtained OAuth token.');
         return auth;
     } catch (error) {
-        log("Error retrieving OAuth token: Check client_id and client_secret.");
+        log('Error retrieving OAuth token: Check client_id and client_secret.');
         process.exit(1);
     }
 }
 
 /**
  * Logs incoming HTTP requests.
+ * @param {http.IncomingMessage} req - The request object.
+ * @param {string} body - The request body.
  */
 function logRequest(req, body) {
     log(`Received ${req.method} request to ${req.url}`);
@@ -81,14 +111,17 @@ function logRequest(req, body) {
 
 /**
  * Sends an RCS message and returns the message ID.
+ * @param {Maap.Bot} bot - The bot instance.
+ * @param {string} sourceAddr - The source address.
+ * @param {string} destAddr - The destination address.
+ * @param {string} messageText - The message text.
+ * @returns {Promise<string>} - The RCS message ID.
  */
 async function sendRCSMessage(bot, sourceAddr, destAddr, messageText) {
     const suggestions = new Maap.Suggestions();
-
-    // Conditionally add reply options based on message content
-    if (messageText.includes("reply YES")) suggestions.addReply('YES', 'Choice_YES');
-    if (messageText.includes("reply NO")) suggestions.addReply('NO', 'Choice_NO');
-    if (messageText.includes("reply CHANGE")) suggestions.addReply('CHANGE', 'Choice_CHANGE');
+    if (messageText.includes('reply YES')) suggestions.addReply('YES', 'Choice_YES');
+    if (messageText.includes('reply NO')) suggestions.addReply('NO', 'Choice_NO');
+    if (messageText.includes('reply CHANGE')) suggestions.addReply('CHANGE', 'Choice_CHANGE');
 
     return new Promise((resolve, reject) => {
         bot.sendMessage(destAddr, messageText, suggestions, (err, body) => {
@@ -96,14 +129,12 @@ async function sendRCSMessage(bot, sourceAddr, destAddr, messageText) {
                 log(`Error sending RCS message: ${err}`);
                 return reject(err);
             }
-
             log(`Response from chatbot server: ${JSON.stringify(body)}`);
             const msgId = body?.RCSMessage?.msgId || null;
-
             if (msgId) {
                 resolve(msgId);
             } else {
-                reject(new Error("Message ID not found in response."));
+                reject(new Error('Message ID not found in response.'));
             }
         });
     });
@@ -111,11 +142,14 @@ async function sendRCSMessage(bot, sourceAddr, destAddr, messageText) {
 
 /**
  * Sends an SMPP deliver_sm message.
+ * @param {Object} session - The SMPP session.
+ * @param {string} phoneNumber - The phone number.
+ * @param {string} displayText - The message to send.
  */
 function sendDeliverSM(session, phoneNumber, displayText) {
     session.deliver_sm({
         source_addr: phoneNumber,
-        destination_addr: chatbotPhoneNumber,
+        destination_addr: CHATBOT_PHONE_NUMBER,
         short_message: displayText
     }, (pdu) => {
         if (pdu.command_status === 0) {
@@ -128,6 +162,7 @@ function sendDeliverSM(session, phoneNumber, displayText) {
 
 /**
  * Handles the webhook payload and sends deliver_sm.
+ * @param {string} body - The webhook payload.
  */
 function handleWebhookPayload(body) {
     const jsonBody = JSON.parse(body);
@@ -135,20 +170,19 @@ function handleWebhookPayload(body) {
     if (jsonBody.event === 'response' && jsonBody.RCSMessage?.suggestedResponse) {
         const displayText = jsonBody.RCSMessage.suggestedResponse.response.reply.displayText;
         const userContact = jsonBody.messageContact.userContact.replace('+', ''); // Remove leading '+'
-
         log(`Sending deliver_sm to ${userContact} with message: "${displayText}"`);
 
-        // Send deliver_sm to all active SMPP sessions
-        smppSessions.forEach(session => {
-            sendDeliverSM(session, userContact, displayText);
-        });
+        smppSessions.forEach(session => sendDeliverSM(session, userContact, displayText));
     } else {
-        log("Webhook received but no action needed.");
+        log('Webhook received but no action needed.');
     }
 }
 
 /**
  * Handles incoming SMPP submit_sm messages and forwards them as RCS messages.
+ * @param {Object} session - The SMPP session.
+ * @param {Object} pdu - The protocol data unit.
+ * @param {Maap.Bot} bot - The bot instance.
  */
 async function handleSMPPMessage(session, pdu, bot) {
     const sourceAddr = pdu.source_addr.toString();
@@ -159,10 +193,7 @@ async function handleSMPPMessage(session, pdu, bot) {
 
     try {
         const rcsMessageId = await sendRCSMessage(bot, sourceAddr, destAddr, messageText);
-        session.send(pdu.response({
-            command_status: smpp.ESME_ROK,
-            message_id: rcsMessageId
-        }));
+        session.send(pdu.response({ command_status: smpp.ESME_ROK, message_id: rcsMessageId }));
         log(`submit_sm_resp sent with RCS message ID: ${rcsMessageId}.`);
     } catch (err) {
         log(`Error handling SMPP submit_sm: ${err}`);
@@ -172,15 +203,16 @@ async function handleSMPPMessage(session, pdu, bot) {
 
 /**
  * Starts the SMPP server.
+ * @param {Maap.Bot} bot - The bot instance.
  */
 function startSMPPServer(bot) {
     const server = smpp.createServer((session) => {
         smppSessions.push(session);
-        log("New SMPP session started.");
+        log('New SMPP session started.');
 
         session.on('bind_transceiver', (pdu) => {
             session.send(pdu.response());
-            log("bind_transceiver received.");
+            log('bind_transceiver received.');
         });
 
         session.on('submit_sm', async (pdu) => {
@@ -191,11 +223,11 @@ function startSMPPServer(bot) {
             session.send(pdu.response());
             session.close();
             smppSessions = smppSessions.filter(s => s !== session);
-            log("SMPP session unbound and closed.");
+            log('SMPP session unbound and closed.');
         });
     });
 
-    server.listen(smppPort, () => log(`SMPP server listening on port ${smppPort}.`));
+    server.listen(SMPP_PORT, () => log(`SMPP server listening on port ${SMPP_PORT}.`));
 }
 
 /**
@@ -203,15 +235,14 @@ function startSMPPServer(bot) {
  */
 performOAuth().then(auth => {
     displayTitle();
-    log("SMS-RCS Bridge started.");
+    log('SMS-RCS Bridge started.');
 
     const bot = new Maap.Bot({
         token: auth.access_token,
-        api_url: maap_url,
-        bot_id: bot_id
+        api_url: MAAP_URL,
+        bot_id: BOT_ID
     });
 
-    // Create HTTP server for webhooks
     http.createServer((req, res) => {
         let body = '';
         req.on('data', chunk => { body += chunk.toString(); });
@@ -220,15 +251,14 @@ performOAuth().then(auth => {
 
             if (req.method === 'POST') {
                 handleWebhookPayload(body);
+                res.writeHead(200, { 'Content-Type': 'text/plain' });
                 res.end('Webhook received');
             } else {
+                res.writeHead(200, { 'Content-Type': 'text/plain' });
                 res.end('GET request received');
             }
-
-            if (!res.headersSent) res.end();
         });
-    }).listen(port, () => log(`HTTP server listening on port ${port}.`));
+    }).listen(PORT, () => log(`HTTP server listening on port ${PORT}.`));
 
-    // Start the SMPP server
     startSMPPServer(bot);
 });
